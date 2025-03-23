@@ -75,10 +75,7 @@ target_compile_features(extism-cpp PUBLIC cxx_std_17)
 target_include_directories(extism-cpp PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
 )
-target_link_libraries(extism-cpp
-        PUBLIC extism-static
-        PRIVATE jsoncpp_lib
-)
+target_link_libraries(extism-cpp PUBLIC extism-static jsoncpp_lib)
 set_target_properties(extism-cpp PROPERTIES
         VERSION ${PROJECT_VERSION}
         PUBLIC_HEADER src/extism.hpp
