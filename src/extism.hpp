@@ -75,7 +75,6 @@ class Wasm {
   std::string _hash;
 
 public:
-  __attribute__((deprecated))
   Wasm(WasmSource source, std::string ref, std::string hash = std::string())
       : _hash(std::move(hash)) {
     if (source == WasmSourceBytes) {

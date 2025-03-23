@@ -56,7 +56,7 @@ public:
     Json::Value doc;
 
     if (std::holds_alternative<std::filesystem::path>(wasm.src)) {
-      doc["path"] = std::string(std::get<std::filesystem::path>(wasm.src));
+      doc["path"] = std::get<std::filesystem::path>(wasm.src).string();
     } else if (std::holds_alternative<WasmURL>(wasm.src)) {
       const auto &wasmURL = std::get<WasmURL>(wasm.src);
       doc["url"] = wasmURL.url;
