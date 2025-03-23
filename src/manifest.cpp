@@ -1,6 +1,6 @@
 #include "extism.hpp"
 #include <algorithm>
-#include <json/json.h>
+#include <nlohmann/json.hpp>
 
 namespace extism {
 
@@ -50,10 +50,11 @@ Wasm Wasm::bytes(const std::vector<uint8_t> &data, std::string hash) {
   return Wasm::bytes(data.data(), data.size(), std::move(hash));
 }
 
+
 class Serializer {
 public:
-  static Json::Value json(const Wasm &wasm, const bool selfContained = true) {
-    Json::Value doc;
+  static nlohmann::json json(const Wasm &wasm, const bool selfContained = true) {
+    nlohmann::json doc;
 
     if (std::holds_alternative<std::filesystem::path>(wasm.src)) {
       doc["path"] = std::get<std::filesystem::path>(wasm.src).string();
@@ -61,24 +62,26 @@ public:
       const auto &wasmURL = std::get<WasmURL>(wasm.src);
       doc["url"] = wasmURL.url;
       doc["method"] = wasmURL.httpMethod;
+
       if (!wasmURL.httpHeaders.empty()) {
-        Json::Value h;
-        for (auto k : wasmURL.httpHeaders) {
-          h[k.first] = k.second;
+        nlohmann::json headers;
+        for (const auto &[key, value] : wasmURL.httpHeaders) {
+          headers[key] = value;
         }
-        doc["headers"] = h;
+        doc["headers"] = headers;
       }
     } else if (std::holds_alternative<WasmBytes>(wasm.src)) {
       const auto &wasmBytes = std::get<WasmBytes>(wasm.src);
       auto src = wasmBytes.get();
       auto srcSize = wasmBytes.getSize();
+
       if (selfContained) {
         doc["data"] = base64_encode(src, srcSize);
       } else {
-        Json::Value data;
-        data["ptr"] = reinterpret_cast<uint64_t>(src);
-        data["len"] = static_cast<uint64_t>(srcSize);
-        doc["data"] = data;
+        doc["data"] = {
+          {"ptr", reinterpret_cast<uint64_t>(src)},
+          {"len", static_cast<uint64_t>(srcSize)}
+        };
       }
     }
 
@@ -90,47 +93,48 @@ public:
   }
 };
 
+
 std::string Manifest::json(const bool selfContained) const {
-  Json::Value doc;
-  Json::Value wasm;
+  nlohmann::json doc;
+
+  // wasm array
+  doc["wasm"] = nlohmann::json::array();
   for (const auto &w : this->wasm) {
-    wasm.append(Serializer::json(w, selfContained));
+    doc["wasm"].push_back(Serializer::json(w, selfContained));
   }
 
-  doc["wasm"] = wasm;
-
+  // config object
   if (!this->config.empty()) {
-    Json::Value conf;
-
-    for (auto k : this->config) {
-      conf[k.first] = k.second;
+    nlohmann::json conf;
+    for (const auto &[key, value] : this->config) {
+      conf[key] = value;
     }
     doc["config"] = conf;
   }
 
+  // allowed_hosts array
   if (!this->allowedHosts.empty()) {
-    Json::Value h;
-
-    for (auto s : this->allowedHosts) {
-      h.append(s);
+    doc["allowed_hosts"] = nlohmann::json::array();
+    for (const auto &host : this->allowedHosts) {
+      doc["allowed_hosts"].push_back(host);
     }
-    doc["allowed_hosts"] = h;
   }
 
+  // allowed_paths object
   if (!this->allowedPaths.empty()) {
-    Json::Value h;
-    for (auto k : this->allowedPaths) {
-      h[k.first] = k.second;
+    nlohmann::json paths;
+    for (const auto &[key, value] : this->allowedPaths) {
+      paths[key] = value;
     }
-    doc["allowed_paths"] = h;
+    doc["allowed_paths"] = paths;
   }
 
+  // timeout
   if (this->timeout.has_value()) {
-    doc["timeout_ms"] = Json::Value(*this->timeout);
+    doc["timeout_ms"] = *this->timeout;
   }
 
-  Json::FastWriter writer;
-  return writer.write(doc);
+  return doc.dump(); // dumps as a compact JSON string; use dump(2) for pretty
 }
 
 Manifest Manifest::wasmPath(std::string s, std::string hash) {
