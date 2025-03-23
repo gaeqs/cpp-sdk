@@ -1,5 +1,5 @@
 #include "extism.hpp"
-#include <json/json.h>
+#include <nlohmann/json.hpp>
 
 namespace extism {
 
@@ -48,14 +48,12 @@ bool Plugin::CancelHandle::cancel() {
 }
 
 void Plugin::config(const Config &data) {
-  Json::Value conf;
+  nlohmann::json conf;
 
-  for (auto k : data) {
-    conf[k.first] = k.second;
+  for (const auto& [key, value] : data) {
+    conf[key] = value;
   }
-
-  Json::FastWriter writer;
-  auto s = writer.write(conf);
+  auto s = conf.dump();
   this->config(s);
 }
 

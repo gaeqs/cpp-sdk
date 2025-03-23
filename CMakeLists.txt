@@ -18,10 +18,11 @@ set(extism_cpp_sources
 )
 
 # === Dependencies ===
+find_package(nlohmann_json REQUIRED)
+
 if (EXTISM_CPP_BUILD_IN_TREE)
     message(STATUS "Using in-tree dependencies")
     add_subdirectory(../extism/libextism extism)
-    add_subdirectory(../jsoncpp jsoncpp)
 else()
     include(FetchContent)
     list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -53,19 +54,6 @@ else()
             set_target_properties(extism-static PROPERTIES INTERFACE_LINK_LIBRARIES "${filtered_libs}")
         endif()
     endif()
-
-    # jsoncpp
-    find_package(jsoncpp)
-    if(NOT jsoncpp_FOUND)
-        message(STATUS "Fetching jsoncpp via FetchContent")
-        FetchContent_Declare(
-                jsoncpp
-                GIT_REPOSITORY https://github.com/open-source-parsers/jsoncpp.git
-                GIT_TAG master
-                SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/jsoncpp
-        )
-        FetchContent_MakeAvailable(jsoncpp)
-    endif()
 endif()
 
 # === Library ===
@@ -75,10 +63,7 @@ target_compile_features(extism-cpp PUBLIC cxx_std_17)
 target_include_directories(extism-cpp PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
 )
-target_link_libraries(extism-cpp
-        PUBLIC extism-static
-        PRIVATE jsoncpp_lib
-)
+target_link_libraries(extism-cpp PUBLIC extism-static nlohmann_json::nlohmann_json)
 set_target_properties(extism-cpp PROPERTIES
         VERSION ${PROJECT_VERSION}
         PUBLIC_HEADER src/extism.hpp
@@ -126,7 +111,6 @@ if (EXTISM_CPP_WITH_CMAKE_PACKAGE)
             ${CMAKE_CURRENT_BINARY_DIR}/extism-cppConfigVersion.cmake
             ${CMAKE_CURRENT_SOURCE_DIR}/extism-cpp-namespaced-targets.cmake
             ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Findextism.cmake
-            ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Findjsoncpp.cmake
             DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/extism-cpp
     )
 endif()
